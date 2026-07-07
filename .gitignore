@@ -1,0 +1,5 @@
+/dist/
+*.test
+.cookies_*.json
+.idea/
+.vscode/

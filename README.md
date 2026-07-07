@@ -1,0 +1,162 @@
+<div align='center'>
+
+<h1>Hot Dreams (Go)</h1>
+
+<p>A Go library for scraping video metadata (title, duration, thumbnail, preview, views,
+rating...) from several adult video sites — a Go port of
+<a href="https://github.com/reinanbr/hotdreams">reinanbr/hotdreams</a> (Python).</p>
+
+<img alt="License" src="https://img.shields.io/badge/license-BSD--3--Clause-orange">
+
+</div>
+
+<hr>
+
+## Table of contents
+
+- [Installation](#installation)
+- [Quickstart](#quickstart)
+- [Custom User-Agent and proxies](#custom-user-agent-and-proxies)
+- [Custom cookies folder](#custom-cookies-folder)
+- [Direct video URL](#direct-video-url)
+- [Supported sites](#supported-sites)
+- [License](#license)
+
+<hr>
+
+## Installation
+
+```sh
+go get github.com/reinanbr/hot_dreams
+```
+
+Requires Go 1.21+.
+
+## Quickstart
+
+Every site has its own subpackage under `sites/`, each exposing the same shape as the
+original Python modules: `SearchPorn(query, ...)` returns a `core.DataVideos`
+(`.Videos`, `.LenVideos`, `.LenPages`, ...), and most also expose `GetVideoEmbed(url)` for
+fetching a single video's embed data and suggestions.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/reinanbr/hot_dreams/sites/pornhub"
+)
+
+func main() {
+	result, err := pornhub.SearchPorn("lorena aquino", 2, nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result.LenVideos, "videos found")
+
+	for _, video := range result.Videos {
+		fmt.Println(video.Title, video.URL)
+	}
+}
+```
+
+`SearchPorn(query, pageLimit, pageNumber)`: pass `pageLimit` pages to fetch (0 defaults to
+2), or a non-nil `pageNumber` to fetch exactly that page instead.
+
+<hr>
+
+## Custom User-Agent and proxies
+
+By default every site module ships with its own working headers. If you need to override
+the User-Agent (e.g. to look like a different browser) or route requests through a proxy
+(e.g. to avoid IP-based rate limiting), call these once — they apply to every site the
+lib supports, retroactively:
+
+```go
+import "github.com/reinanbr/hot_dreams"
+
+hotdreams.SetUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+
+hotdreams.SetProxies("http://user:pass@host:port", "http://user:pass@host:port")
+
+// ... use the lib normally
+pornhub.SearchPorn("lorena aquino", 2, nil)
+
+// to stop using the proxy
+hotdreams.ClearProxies()
+```
+
+<hr>
+
+## Custom cookies folder
+
+Every site module persists the cookies it picks up (e.g. anti-bot/session cookies) to a
+small JSON file per site, and reuses them on the next call. By default those files are
+written to a `hotdreams/cookies` folder inside the OS temp dir. Call `SetCookiesDir()` to
+store them somewhere else instead:
+
+```go
+import "github.com/reinanbr/hot_dreams"
+
+hotdreams.SetCookiesDir("/home/me/.hotdreams_cookies")
+```
+
+<hr>
+
+## Direct video URL
+
+`hotdreams.GetDirectURL(url, format)` resolves a video page URL to the direct,
+playable/downloadable video file URL. It shells out to the
+[yt-dlp](https://github.com/yt-dlp/yt-dlp) CLI, so make sure `yt-dlp` is installed and on
+`PATH`:
+
+```go
+import "github.com/reinanbr/hot_dreams"
+
+direct, err := hotdreams.GetDirectURL("https://noodlemagazine.com/watch/-154109474_456276135", "best")
+// direct -> "https://cdn77-pr.pvvstream.pro/videos/720/-154109474_456276135.mp4?..."
+```
+
+Supported hosts today: `pornhub.com`, `xvideos.com`, `tnaflix.com`, `spankbang.com`,
+`playvids.com`, `noodlemagazine.com`, `eporner.com` — these are the sites yt-dlp ships a
+dedicated extractor for. Calling it on any other host raises an error; yt-dlp's generic
+extractor doesn't reliably resolve those, so they'd each need dedicated scraping, same as
+the rest of this lib.
+
+<hr>
+
+## Supported sites
+
+| site         | package                              | data video | embed url video |
+|--------------|---------------------------------------|:----------:|:----------------:|
+| PornHub       | `sites/pornhub`                       | ✅ | ✅ |
+| XVideos       | `sites/xvideos`                       | ✅ | ✅ |
+| tnaflix       | `sites/tnaflix`                       | ✅ | ✅ |
+| NoodleMagazine| `sites/noodlemagazine`                | ✅ | ✅ |
+| ukdevilz      | `sites/ukdevilz`                      | ✅ | ✅ |
+| pornone       | `sites/pornone`                       | ✅ | ✅ |
+| Eporner       | `sites/eporner`                       | ✅ | ✅ |
+| FPO.XXX       | `sites/fpo`                           | ✅ | ✅ |
+| SpankBang¹    | `sites/spankbang`                     | ✅ | ✅ |
+| playvids²     | `sites/playvids`                      | ✅ |    |
+
+And sites from OnlyFans leaks:
+
+| site         | package                              | data video |
+|--------------|---------------------------------------|:----------:|
+| nudes7        | `sites/only/nudes7`                   | ✅ |
+| viralpornhub  | `sites/only/viralpornhub`             | ✅ |
+
+¹ spankbang.com is behind Cloudflare's JS challenge; the upstream Python lib works around
+it with `cloudscraper`, this port uses a plain HTTP client so requests may be blocked.
+
+² playvids' `SearchPorn` returns a plain `[]Video` (no pagination metadata), matching the
+upstream Python module's shape (it never went through the shared search helper there
+either).
+
+<hr>
+
+## License
+
+BSD 3-Clause — see [LICENSE](LICENSE).
