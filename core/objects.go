@@ -1,5 +1,5 @@
 // Package core provides the shared plumbing (HTTP client, cookies, settings,
-// data types) used by every site scraper in hot_dreams.
+// data types) used by every site scraper in hotdreams-go.
 package core
 
 import "fmt"

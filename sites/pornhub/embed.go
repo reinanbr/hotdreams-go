@@ -1,7 +1,7 @@
 package pornhub
 
 import (
-	"github.com/reinanbr/hot_dreams/core"
+	"github.com/reinanbr/hotdreams-go/core"
 )
 
 // GetVideoEmbed fetches a single PornHub video's embed data and suggestions.

@@ -1,4 +1,4 @@
-module github.com/reinanbr/hot_dreams
+module github.com/reinanbr/hotdreams-go
 
 go 1.25.0
 

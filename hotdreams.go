@@ -8,7 +8,7 @@
 // GetVideoEmbed(url) for fetching a single video's embed data and
 // suggestions. For example:
 //
-//	import "github.com/reinanbr/hot_dreams/sites/pornhub"
+//	import "github.com/reinanbr/hotdreams-go/sites/pornhub"
 //
 //	result, err := pornhub.SearchPorn("lorena aquino", 2, nil)
 //	fmt.Println(result.LenVideos, "videos found")
@@ -17,11 +17,11 @@
 //	}
 package hotdreams
 
-import "github.com/reinanbr/hot_dreams/core"
+import "github.com/reinanbr/hotdreams-go/core"
 
 // Version and Author mirror hotdreams.__version__ / hotdreams.__author__.
 const (
-	Version = "0.0.4"
+	Version = "0.2.0"
 	Author  = "ReinanBr <slimchatuba@gmail.com>"
 )
 

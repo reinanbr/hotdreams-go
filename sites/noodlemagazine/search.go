@@ -3,7 +3,7 @@ package noodlemagazine
 import (
 	"fmt"
 
-	"github.com/reinanbr/hot_dreams/core"
+	"github.com/reinanbr/hotdreams-go/core"
 )
 
 func buildSearchURL(query string, page int) string {

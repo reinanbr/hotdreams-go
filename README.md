@@ -27,7 +27,7 @@ rating...) from several adult video sites — a Go port of
 ## Installation
 
 ```sh
-go get github.com/reinanbr/hot_dreams
+go get github.com/reinanbr/hotdreams-go
 ```
 
 Requires Go 1.21+.
@@ -45,7 +45,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/reinanbr/hot_dreams/sites/pornhub"
+	"github.com/reinanbr/hotdreams-go/sites/pornhub"
 )
 
 func main() {
@@ -74,7 +74,7 @@ the User-Agent (e.g. to look like a different browser) or route requests through
 lib supports, retroactively:
 
 ```go
-import "github.com/reinanbr/hot_dreams"
+import "github.com/reinanbr/hotdreams-go"
 
 hotdreams.SetUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
 
@@ -97,7 +97,7 @@ written to a `hotdreams/cookies` folder inside the OS temp dir. Call `SetCookies
 store them somewhere else instead:
 
 ```go
-import "github.com/reinanbr/hot_dreams"
+import "github.com/reinanbr/hotdreams-go"
 
 hotdreams.SetCookiesDir("/home/me/.hotdreams_cookies")
 ```
@@ -112,7 +112,7 @@ playable/downloadable video file URL. It shells out to the
 `PATH`:
 
 ```go
-import "github.com/reinanbr/hot_dreams"
+import "github.com/reinanbr/hotdreams-go"
 
 direct, err := hotdreams.GetDirectURL("https://noodlemagazine.com/watch/-154109474_456276135", "best")
 // direct -> "https://cdn77-pr.pvvstream.pro/videos/720/-154109474_456276135.mp4?..."

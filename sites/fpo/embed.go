@@ -3,7 +3,7 @@ package fpo
 import (
 	"regexp"
 
-	"github.com/reinanbr/hot_dreams/core"
+	"github.com/reinanbr/hotdreams-go/core"
 )
 
 var videoCategoriesRe = regexp.MustCompile(`video_categories:\s*'([^']*)'`)

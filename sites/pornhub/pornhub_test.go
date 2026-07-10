@@ -3,7 +3,7 @@ package pornhub
 import (
 	"testing"
 
-	"github.com/reinanbr/hot_dreams/core"
+	"github.com/reinanbr/hotdreams-go/core"
 )
 
 const searchPageHTML = `

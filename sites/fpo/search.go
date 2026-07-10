@@ -3,7 +3,7 @@ package fpo
 import (
 	"fmt"
 
-	"github.com/reinanbr/hot_dreams/core"
+	"github.com/reinanbr/hotdreams-go/core"
 )
 
 // buildSearchURL mirrors utils.py's url_base_page_number_search: page 1 is a
