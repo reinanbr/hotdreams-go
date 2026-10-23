@@ -18,6 +18,7 @@ rating...) from several adult video sites — a Go port of
 - [Quickstart](#quickstart)
 - [Custom User-Agent and proxies](#custom-user-agent-and-proxies)
 - [Custom cookies folder](#custom-cookies-folder)
+- [Browser cookies](#browser-cookies)
 - [Direct video URL](#direct-video-url)
 - [Supported sites](#supported-sites)
 - [License](#license)
@@ -78,7 +79,15 @@ import "github.com/reinanbr/hotdreams-go"
 
 hotdreams.SetUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
 
+// one proxy for every request (http, https or socks5)
+hotdreams.SetProxy("socks5://127.0.0.1:9050")
+
+// or a different proxy per scheme
 hotdreams.SetProxies("http://user:pass@host:port", "http://user:pass@host:port")
+
+// or rotate round-robin across a list (one proxy per request)
+hotdreams.SetProxyList("http://user:pass@host1:port", "socks5://host2:1080")
+hotdreams.LoadProxyList("proxies.txt") // one proxy per line, '#' comments allowed
 
 // ... use the lib normally
 pornhub.SearchPorn("lorena aquino", 2, nil)
@@ -86,6 +95,9 @@ pornhub.SearchPorn("lorena aquino", 2, nil)
 // to stop using the proxy
 hotdreams.ClearProxies()
 ```
+
+SOCKS5 proxies resolve hostnames on the proxy side (`socks5h://` is accepted too), which
+also gets around sites blocked at the DNS level by your ISP.
 
 <hr>
 
@@ -101,6 +113,29 @@ import "github.com/reinanbr/hotdreams-go"
 
 hotdreams.SetCookiesDir("/home/me/.hotdreams_cookies")
 ```
+
+<hr>
+
+## Browser cookies
+
+Some sites only serve full results to a "real" browser session (age gate, login,
+Cloudflare challenge...). Export the cookies from your browser and import them; each
+cookie goes to the site it belongs to and is saved to that site's cookie file, so it is
+reused on the next runs too:
+
+```go
+import "github.com/reinanbr/hotdreams-go"
+
+// Netscape cookies.txt (e.g. "Get cookies.txt LOCALLY" extension, yt-dlp --cookies)
+// or the JSON export of Cookie-Editor / EditThisCookie — detected automatically
+n, err := hotdreams.ImportBrowserCookies("/home/me/Downloads/cookies.txt")
+
+// or paste the "Cookie" request header straight from the devtools Network tab
+hotdreams.SetCookieHeader("https://pornone.com", "cf_clearance=...; age_verified=1")
+```
+
+If you import Cloudflare cookies (`cf_clearance`), also call `SetUserAgent` with the exact
+User-Agent of the browser they came from, otherwise Cloudflare rejects them.
 
 <hr>
 
@@ -140,6 +175,7 @@ the rest of this lib.
 | FPO.XXX       | `sites/fpo`                           | ✅ | ✅ |
 | SpankBang¹    | `sites/spankbang`                     | ✅ | ✅ |
 | playvids²     | `sites/playvids`                      | ✅ |    |
+| tubepornstars³| `sites/tubepornstars`                 | ✅ |    |
 
 And sites from OnlyFans leaks:
 
@@ -154,6 +190,10 @@ it with `cloudscraper`, this port uses a plain HTTP client so requests may be bl
 ² playvids' `SearchPorn` returns a plain `[]Video` (no pagination metadata), matching the
 upstream Python module's shape (it never went through the shared search helper there
 either).
+
+³ tubepornstars is an aggregator: each result's `URL` is the original video page on the
+tube that hosts it (decoded from the site's `/out/` redirect link), and `Stats` holds that
+tube's name. A pornstar name as the query lands on that pornstar's page.
 
 <hr>
 

@@ -21,7 +21,7 @@ import "github.com/reinanbr/hotdreams-go/core"
 
 // Version and Author mirror hotdreams.__version__ / hotdreams.__author__.
 const (
-	Version = "0.2.0"
+	Version = "0.3.0"
 	Author  = "ReinanBr <slimchatuba@gmail.com>"
 )
 
@@ -37,6 +37,7 @@ var AvailableSites = []string{
 	"pornone",
 	"Eporner",
 	"FPO.XXX",
+	"tubepornstars",
 }
 
 // SetUserAgent overrides the User-Agent header used by every site scraper.
@@ -51,6 +52,23 @@ func SetProxies(httpProxy, httpsProxy string) error {
 	return core.SetProxies(httpProxy, httpsProxy)
 }
 
+// SetProxy routes every request (http and https) through a single proxy,
+// e.g. SetProxy("socks5://127.0.0.1:9050").
+func SetProxy(proxy string) error {
+	return core.SetProxy(proxy)
+}
+
+// SetProxyList rotates requests round-robin across the given proxies.
+func SetProxyList(proxies ...string) error {
+	return core.SetProxyList(proxies...)
+}
+
+// LoadProxyList reads proxies from a file (one per line) and rotates
+// requests across them.
+func LoadProxyList(path string) error {
+	return core.LoadProxyList(path)
+}
+
 // ClearProxies stops routing requests through a proxy.
 func ClearProxies() {
 	core.ClearProxies()
@@ -60,6 +78,20 @@ func ClearProxies() {
 // cookie files in. Defaults to a folder inside the OS temp dir.
 func SetCookiesDir(path string) error {
 	return core.SetCookiesDir(path)
+}
+
+// ImportBrowserCookies loads cookies exported from a browser (Netscape
+// cookies.txt or Cookie-Editor/EditThisCookie JSON) into every matching site
+// session and saves them to that site's cookie file. Returns how many cookies
+// were read.
+func ImportBrowserCookies(path string) (int, error) {
+	return core.ImportBrowserCookies(path)
+}
+
+// SetCookieHeader imports a raw "Cookie" header value copied from the browser
+// devtools (e.g. "a=1; b=2") for the site at siteURL.
+func SetCookieHeader(siteURL, header string) error {
+	return core.SetCookieHeader(siteURL, header)
 }
 
 // GetDirectURL resolves a video page URL to the direct, playable/downloadable

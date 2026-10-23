@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -42,6 +43,58 @@ func Text(doc *goquery.Document, selector string) string {
 		return ""
 	}
 	return strings.TrimSpace(sel.Text())
+}
+
+// lazyImageAttrs are checked, in order, before falling back to src: most
+// sites lazy-load thumbnails, leaving a placeholder (data: URI, blank gif)
+// in src and the real image URL in one of these attributes.
+var lazyImageAttrs = []string{"data-src", "data-original", "data-lazy-src", "data-thumb", "data-srcset", "srcset", "src"}
+
+// ImageURL returns the real image URL of an <img> (or <source>) selection,
+// skipping lazy-load placeholders and resolving protocol-relative/relative
+// URLs against base. Returns "" if no usable URL is found.
+func ImageURL(img *goquery.Selection, base string) string {
+	for _, attr := range lazyImageAttrs {
+		v, ok := img.Attr(attr)
+		if !ok {
+			continue
+		}
+		v = strings.TrimSpace(v)
+		if strings.HasSuffix(attr, "srcset") {
+			// "url1 320w, url2 640w" -> url1
+			v = strings.TrimSpace(strings.Split(v, ",")[0])
+			if f := strings.Fields(v); len(f) > 0 {
+				v = f[0]
+			}
+		}
+		if v == "" || strings.HasPrefix(v, "data:") || isPlaceholderImage(v) {
+			continue
+		}
+		return ResolveURL(base, v)
+	}
+	return ""
+}
+
+func isPlaceholderImage(v string) bool {
+	l := strings.ToLower(v)
+	return strings.Contains(l, "blank.gif") || strings.Contains(l, "placeholder") ||
+		strings.Contains(l, "lazy.") || strings.HasSuffix(l, "/1x1.gif")
+}
+
+// ResolveURL resolves ref (relative or protocol-relative) against base.
+func ResolveURL(base, ref string) string {
+	if strings.HasPrefix(ref, "//") {
+		return "https:" + ref
+	}
+	b, err := url.Parse(base)
+	if err != nil || base == "" {
+		return ref
+	}
+	r, err := url.Parse(ref)
+	if err != nil {
+		return ref
+	}
+	return b.ResolveReference(r).String()
 }
 
 // ParseDurationClock converts a "H:MM:SS" / "MM:SS" / "SS" clock string

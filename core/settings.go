@@ -47,6 +47,8 @@ var (
 	customUserAgent string
 	proxyHTTP       *url.URL
 	proxyHTTPS      *url.URL
+	proxyList       []*url.URL
+	proxyNext       int
 )
 
 func init() {
@@ -88,19 +90,42 @@ func SetUserAgent(userAgent string) {
 	mu.Unlock()
 }
 
+// parseProxy validates a proxy URL. Supported schemes: http, https, socks5
+// (socks5h is accepted as an alias: Go's socks5 already resolves hostnames on
+// the proxy side, which also gets around DNS-level blocking).
+func parseProxy(raw string) (*url.URL, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return nil, err
+	}
+	switch u.Scheme {
+	case "http", "https", "socks5":
+	case "socks5h":
+		u.Scheme = "socks5"
+	default:
+		return nil, fmt.Errorf("unsupported proxy scheme %q in %q (use http, https or socks5)", u.Scheme, raw)
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("proxy %q has no host", raw)
+	}
+	return u, nil
+}
+
 // SetProxies routes every site scraper's requests through the given
 // proxy/proxies, e.g. SetProxies("http://user:pass@host:port", "").
+// httpProxy is used for http:// requests and httpsProxy for https:// ones;
+// if only one is given it is used for both.
 func SetProxies(httpProxy, httpsProxy string) error {
 	var hp, hsp *url.URL
 	if httpProxy != "" {
-		u, err := url.Parse(httpProxy)
+		u, err := parseProxy(httpProxy)
 		if err != nil {
 			return err
 		}
 		hp = u
 	}
 	if httpsProxy != "" {
-		u, err := url.Parse(httpsProxy)
+		u, err := parseProxy(httpsProxy)
 		if err != nil {
 			return err
 		}
@@ -109,8 +134,56 @@ func SetProxies(httpProxy, httpsProxy string) error {
 	mu.Lock()
 	proxyHTTP = hp
 	proxyHTTPS = hsp
+	proxyList = nil
 	mu.Unlock()
 	return nil
+}
+
+// SetProxy routes every request (http and https) through a single proxy,
+// e.g. SetProxy("socks5://127.0.0.1:9050").
+func SetProxy(proxy string) error {
+	return SetProxies(proxy, proxy)
+}
+
+// SetProxyList rotates requests round-robin across the given proxies (one
+// proxy per request). It replaces any proxy set with SetProxies/SetProxy.
+func SetProxyList(proxies ...string) error {
+	list := make([]*url.URL, 0, len(proxies))
+	for _, p := range proxies {
+		if strings.TrimSpace(p) == "" {
+			continue
+		}
+		u, err := parseProxy(p)
+		if err != nil {
+			return err
+		}
+		list = append(list, u)
+	}
+	mu.Lock()
+	proxyHTTP = nil
+	proxyHTTPS = nil
+	proxyList = list
+	proxyNext = 0
+	mu.Unlock()
+	return nil
+}
+
+// LoadProxyList reads proxies from a file (one per line, '#' comments
+// allowed) and rotates across them like SetProxyList.
+func LoadProxyList(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var proxies []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		proxies = append(proxies, line)
+	}
+	return SetProxyList(proxies...)
 }
 
 // ClearProxies stops routing requests through a proxy.
@@ -118,25 +191,31 @@ func ClearProxies() {
 	mu.Lock()
 	proxyHTTP = nil
 	proxyHTTPS = nil
+	proxyList = nil
 	mu.Unlock()
 }
 
-var sharedTransport = &http.Transport{
-	Proxy: func(req *http.Request) (*url.URL, error) {
-		mu.RLock()
-		defer mu.RUnlock()
-		if req.URL.Scheme == "https" && proxyHTTPS != nil {
-			return proxyHTTPS, nil
-		}
-		if req.URL.Scheme == "http" && proxyHTTP != nil {
-			return proxyHTTP, nil
-		}
-		if proxyHTTPS != nil {
-			return proxyHTTPS, nil
-		}
+func selectProxy(req *http.Request) (*url.URL, error) {
+	mu.Lock()
+	defer mu.Unlock()
+	if len(proxyList) > 0 {
+		u := proxyList[proxyNext%len(proxyList)]
+		proxyNext++
+		return u, nil
+	}
+	if req.URL.Scheme == "https" && proxyHTTPS != nil {
+		return proxyHTTPS, nil
+	}
+	if req.URL.Scheme == "http" && proxyHTTP != nil {
 		return proxyHTTP, nil
-	},
+	}
+	if proxyHTTPS != nil {
+		return proxyHTTPS, nil
+	}
+	return proxyHTTP, nil
 }
+
+var sharedTransport = &http.Transport{Proxy: selectProxy}
 
 type headerRoundTripper struct{}
 
@@ -179,6 +258,7 @@ func NewClient(cookieFile, baseURL string) *Client {
 	if CookiesFileExists(cookieFile) {
 		_ = c.LoadCookies()
 	}
+	registerClient(c)
 	return c
 }
 

@@ -35,8 +35,15 @@ func videoCards(heaven *goquery.Selection, pageNumber int, urlFont string) []cor
 		title := titleDiv.Text()
 		timeVal := strings.TrimSpace(vd.Find("span.durlabel").First().Text())
 		stats := normalizeStats(vd.Find("div.author").First())
-		urlImg, _ := vd.Find("img.imgvideo").First().Attr("src")
+		img := vd.Find("img.imgvideo").First()
+		if img.Length() == 0 {
+			img = vd.Find("img").First()
+		}
+		urlImg := core.ImageURL(img, URLBase)
 		urlVideo, _ := vd.Attr("href")
+		if urlVideo != "" {
+			urlVideo = core.ResolveURL(URLBase, urlVideo)
+		}
 
 		var dur int
 		parts := strings.SplitN(timeVal, ":", 2)
@@ -143,9 +150,17 @@ func GetVideoEmbed(url string) (core.EmbedVideo, error) {
 		return core.EmbedVideo{}, err
 	}
 
-	var link string
+	var link, thumbnail string
 	if video := doc.Find("video").First(); video.Length() > 0 {
 		link, _ = video.Find("source").First().Attr("src")
+		if poster, ok := video.Attr("poster"); ok && poster != "" {
+			thumbnail = core.ResolveURL(URLBase, poster)
+		}
+	}
+	if thumbnail == "" {
+		if og := core.Meta(doc, "property", "og:image"); og != "" {
+			thumbnail = core.ResolveURL(URLBase, og)
+		}
 	}
 	title := core.Text(doc, "h1.text-3xl")
 
@@ -153,6 +168,7 @@ func GetVideoEmbed(url string) (core.EmbedVideo, error) {
 		SiteName:            SiteName,
 		URL:                 link,
 		Title:               title,
+		Thumbnail:           thumbnail,
 		LenVideosSugestions: 0,
 	}, nil
 }
